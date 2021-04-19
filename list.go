@@ -18,11 +18,12 @@ func (v viewer) View() string {
 	return fmt.Sprint(v.val)
 }
 
-type SelectedFunc func(msg tea.Msg) (tea.Model, tea.Cmd)
+type SelectedFunc func(item tea.Msg) tea.Cmd
 
 type List struct {
 	items  []Viewer
 	cursor int
+    selectedFunc SelectedFunc
 }
 
 func NewList() *List {
@@ -34,6 +35,10 @@ func NewList() *List {
 
 func (m *List) Clear() {
 	m.items = nil
+}
+
+func (m *List) SetSelectedFunc(f SelectedFunc) {
+    m.selectedFunc = f
 }
 
 func (m *List) AddItem(item Viewer) {
@@ -54,10 +59,16 @@ func (m *List) Init() tea.Cmd {
 }
 
 func (m *List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+    if m.cursor > len(m.items) {
+        m.cursor = 0
+    }
 	switch msg := msg.(type) {
 
 	case tea.KeyMsg:
 		switch msg.String() {
+
+        case "enter":
+            return m, m.selectedFunc(m.CurrentItem())
 
 		case "ctrl+c", "q":
 			return m, tea.Quit
