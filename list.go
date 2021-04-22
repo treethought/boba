@@ -6,10 +6,12 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+// Viewer implements the View() method of a tea.Model
 type Viewer interface {
 	View() string
 }
 
+// viewer is a wrapping struct allowing non tea.Model's to be added as list items
 type viewer struct {
 	val interface{}
 }
@@ -18,18 +20,17 @@ func (v viewer) View() string {
 	return fmt.Sprint(v.val)
 }
 
-type SelectedFunc func(item tea.Msg) tea.Cmd
-
 type List struct {
-	items  []Viewer
-	cursor int
-    selectedFunc SelectedFunc
+	items        []Viewer
+	cursor       int
+	selectedFunc func(tea.Msg) tea.Cmd
 }
 
 func NewList() *List {
 	return &List{
-		items:  []Viewer{},
-		cursor: 0,
+		items:        []Viewer{},
+		cursor:       0,
+		selectedFunc: func(tea.Msg) tea.Cmd { return nil },
 	}
 }
 
@@ -37,8 +38,8 @@ func (m *List) Clear() {
 	m.items = nil
 }
 
-func (m *List) SetSelectedFunc(f SelectedFunc) {
-    m.selectedFunc = f
+func (m *List) SetSelectedFunc(f func(tea.Msg) tea.Cmd) {
+	m.selectedFunc = f
 }
 
 func (m *List) AddItem(item Viewer) {
@@ -59,16 +60,16 @@ func (m *List) Init() tea.Cmd {
 }
 
 func (m *List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-    if m.cursor > len(m.items) {
-        m.cursor = 0
-    }
+	if m.cursor > len(m.items) {
+		m.cursor = 0
+	}
 	switch msg := msg.(type) {
 
 	case tea.KeyMsg:
 		switch msg.String() {
 
-        case "enter":
-            return m, m.selectedFunc(m.CurrentItem())
+		case "enter":
+			return m, m.selectedFunc(m.CurrentItem())
 
 		case "ctrl+c", "q":
 			return m, tea.Quit
