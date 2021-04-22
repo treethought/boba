@@ -5,23 +5,21 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-type SubmittedFunc func(value string) tea.Cmd
 
 type Input struct {
 	textinput.Model
-	onSubmit SubmittedFunc
+	onSubmit func(v string) tea.Cmd
 }
 
-func NewInput(submitted SubmittedFunc) *Input {
+func NewInput() *Input {
 	return &Input{
-		onSubmit: submitted,
+		onSubmit: func(v string) tea.Cmd {return nil},
 		Model:    textinput.NewModel(),
 	}
 }
 
-func (m Input) SetSubmitHandler(f SubmittedFunc) Input {
+func (m *Input) SetSubmitHandler(f func(val string) tea.Cmd) {
 	m.onSubmit = f
-	return m
 }
 
 func (m *Input) Init() tea.Cmd {
@@ -38,7 +36,7 @@ func (m *Input) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyEnter:
 			val := m.Value()
 			m.SetValue("")
-            m.Blur()
+			m.Blur()
 			return m, m.onSubmit(val)
 		}
 	}
