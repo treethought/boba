@@ -32,12 +32,24 @@ func ChangeState(name string) tea.Cmd {
 	}
 }
 
+func (a *App) Get(name string) tea.Model {
+    return a.getModel(name)
+}
+
 func (a *App) Add(name string, m tea.Model) {
 	a.setModel(name, m)
 }
 
 func (a *App) setModel(name string, m tea.Model) {
 	a.views[name] = m
+}
+
+func (a *App) getModel(name string)  tea.Model {
+    m, ok := a.views[name]
+    if !ok {
+        return nil
+    }
+    return m
 }
 
 func (a *App) SetFocus(name string) {
