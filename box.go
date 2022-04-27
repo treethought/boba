@@ -7,9 +7,13 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-var boyStyle = lipgloss.NewStyle().Padding(0).
-	BorderStyle(lipgloss.NormalBorder()).
-	BorderForeground(lipgloss.AdaptiveColor{Light: "#B793FF", Dark: "#AD58B4"})
+var (
+	boxStyle = lipgloss.NewStyle().Padding(0).
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderForeground(lipgloss.AdaptiveColor{Light: "#B793FF", Dark: "#AD58B4"})
+
+	nodeStyle = lipgloss.NewStyle()
+)
 
 type BoxNode struct {
 	tea.Model
@@ -17,7 +21,7 @@ type BoxNode struct {
 	SizeX int
 	// Width represents the percent of node's parent width to fill
 	SizeY int
-	lines []string
+	style lipgloss.Style
 }
 
 func (n *BoxNode) Init() tea.Cmd {
@@ -32,6 +36,7 @@ func (n *BoxNode) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		Model: m,
 		SizeY: n.SizeY,
 		SizeX: n.SizeX,
+		style: n.style,
 	}
 	return node, cmd
 }
@@ -59,7 +64,7 @@ func NewBox(orientation string, x, y int) *Box {
 		SizeX:       x,
 		SizeY:       y,
 		orientation: orientation,
-		style:       boyStyle,
+		style:       boxStyle,
 	}
 }
 
@@ -69,6 +74,17 @@ func (m *Box) AddNode(n tea.Model, h, w int) {
 		Model: n,
 		SizeY: h,
 		SizeX: w,
+		style: nodeStyle,
+	}
+	m.nodes = append(m.nodes, node)
+}
+
+func (m *Box) AddNodeWithStyle(n tea.Model, h, w int, style lipgloss.Style) {
+	node := &BoxNode{
+		Model: n,
+		SizeY: h,
+		SizeX: w,
+		style: style,
 	}
 	m.nodes = append(m.nodes, node)
 }
@@ -125,26 +141,26 @@ func (m *Box) View() string {
 
 	for _, n := range m.nodes {
 
-		targetWidth := int(float64(m.width) * float64(n.SizeX/100))
-		targetLines := int(float64(m.height) * float64(n.SizeY/100))
+		x, y := n.style.GetFrameSize()
+
+		targetWidth := int(float64(m.width) * (float64(n.SizeX/100) - float64(x)))
+		targetLines := int(float64(m.height) * (float64(n.SizeY/100) - float64(y)))
 
 		nodeContent := n.View()
 
 		s := strings.ReplaceAll(nodeContent, "\r\n", "\n") // normalize line endings
 
-		nodeStyle := lipgloss.NewStyle().
-			// BorderStyle(lipgloss.NormalBorder()).
-			// BorderForeground(lipgloss.AdaptiveColor{Light: "#F793FF", Dark: "#AD58B4"}).
-			MaxWidth(targetWidth).MaxHeight(targetLines).Width(targetWidth)
-
-		s = nodeStyle.Render(s)
+		s = n.style.
+			MaxWidth(targetWidth).
+			MaxHeight(targetLines).
+			Render(s)
 
 		if m.orientation == "horizontal" {
-			out = lipgloss.JoinHorizontal(lipgloss.Left, out, s)
+			out = lipgloss.JoinHorizontal(lipgloss.Center, out, s)
 
 		}
 		if m.orientation == "vertical" {
-			out = lipgloss.JoinVertical(lipgloss.Left, out, s)
+			out = lipgloss.JoinVertical(lipgloss.Center, out, s)
 		}
 	}
 	return m.style.
