@@ -61,7 +61,10 @@ func (m *List) Add(item interface{}) {
 
 // CurrentItem returns the item at the location of the cursor
 func (m *List) CurrentItem() Viewer {
-	return m.items[m.cursor]
+	if len(m.items) > m.cursor {
+		return m.items[m.cursor]
+	}
+	return nil
 }
 
 func (m *List) Init() tea.Cmd {
@@ -79,7 +82,11 @@ func (m *List) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 
 		case "enter":
-			return m, m.selectedFunc(m.CurrentItem())
+			v := m.CurrentItem()
+			if v != nil {
+				return m, m.selectedFunc(v)
+			}
+			return m, nil
 
 		case "ctrl+c", "q":
 			return m, tea.Quit
