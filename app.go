@@ -96,10 +96,13 @@ func (a *App) SetDelegate(f UpdateFunc) {
 }
 
 func (a *App) Init() tea.Cmd {
-	if a.current == nil {
-		return a.initFunc()
+	cmds := []tea.Cmd{}
+	for _, m := range a.views {
+		cmd := m.Init()
+		cmds = append(cmds, cmd)
 	}
-	return a.current.Init()
+
+	return tea.Batch(cmds...)
 }
 
 // Update handles tea.Msgs to perform updates to application model.
