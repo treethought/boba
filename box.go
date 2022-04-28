@@ -28,7 +28,7 @@ func (n *BoxNode) Init() tea.Cmd {
 	return nil
 }
 
-func (n *BoxNode) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (n *BoxNode) Update(msg tea.Msg) (*BoxNode, tea.Cmd) {
 
 	m, cmd := n.Model.Update(msg)
 
@@ -46,9 +46,9 @@ type joinFunc func(n BoxNode, join func(pos lipgloss.Position, strs ...string) s
 type Box struct {
 	nodes []*BoxNode
 	// Percentage of Window height
-	SizeX int
+	SizeX float64
 	// Percentage of Window width
-	SizeY int
+	SizeY float64
 
 	width  int
 	height int
@@ -61,15 +61,15 @@ type Box struct {
 func NewBox(orientation string, x, y int) *Box {
 	return &Box{
 		nodes:       []*BoxNode{},
-		SizeX:       x,
-		SizeY:       y,
+		SizeY:       float64(x) / float64(100),
+		SizeX:       float64(y) / float64(100),
 		orientation: orientation,
 		style:       boxStyle,
 	}
 }
 
 // AddNode adds a new node with h and w percent of parent height and width
-func (m *Box) AddNode(n tea.Model, h, w int) {
+func (m *Box) AddNode(n tea.Model, w, h int) {
 	node := &BoxNode{
 		Model: n,
 		SizeY: float64(h) / float64(100),
@@ -100,10 +100,10 @@ func (m *Box) Init() tea.Cmd {
 
 func (m Box) getNodeSize(n *BoxNode) (w int, y int) {
 
-	x, y := n.style.GetFrameSize()
+	// x, y := n.style.GetFrameSize()
 
-	targetWidth := int(float64(m.width)*(n.SizeX)) - x
-	targetLines := int(float64(m.height)*(n.SizeY)) - y
+	targetWidth := int(float64(m.width) * (n.SizeX))
+	targetLines := int(float64(m.height) * (n.SizeY))
 	return targetWidth, targetLines
 
 }
@@ -136,10 +136,12 @@ func (m *Box) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// 	return m, nil
 
 	case tea.WindowSizeMsg:
-		x, y := m.style.GetFrameSize()
+		// x, y := m.style.GetFrameSize()
 
 		m.width = int(float64(msg.Width)*(float64(m.SizeX/100))) - x
 		m.height = int(float64(msg.Height)*(float64(m.SizeY/100))) - y
+		m.width = int(float64(msg.Width) * m.SizeX)
+		m.height = int(float64(msg.Height) * m.SizeY)
 
 		cmds = append(cmds, m.resizeNodes()...)
 
@@ -154,17 +156,12 @@ func (m *Box) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Box) resizeNodes() (cmds []tea.Cmd) {
-	for i, n := range m.nodes {
+	for _, n := range m.nodes {
 		x, y := m.getNodeSize(n)
 
 		msg := tea.WindowSizeMsg{
 			Width:  x,
 			Height: y,
-		}
-		mod, cmd := n.Update(msg)
-		nm, ok := mod.(*BoxNode)
-		if ok {
-			m.nodes[i] = nm
 		}
 		cmds = append(cmds, cmd)
 	}
@@ -177,19 +174,20 @@ func (m *Box) View() string {
 
 	for _, n := range m.nodes {
 
-		x, y := n.style.GetFrameSize()
-
-		targetWidth, targetLines := m.getNodeSize(n)
+		x, y := m.getNodeSize(n)
+		if m.width == 0 || m.height == 0 {
+			return ""
+		}
 
 		nodeContent := n.View()
 
 		s := strings.ReplaceAll(nodeContent, "\r\n", "\n") // normalize line endings
 
 		s = n.style.
-			Width(targetWidth - x).
-			// Height(targetLines - y).
-			// MaxWidth(targetLines - x).
-			MaxHeight(targetLines - y).
+			// Width(x - fx).
+			// Height(y - fy).
+			MaxWidth(x).
+			MaxHeight(y).
 			Render(s)
 
 		if m.orientation == "horizontal" {
@@ -200,10 +198,10 @@ func (m *Box) View() string {
 			out = lipgloss.JoinVertical(lipgloss.Center, out, s)
 		}
 	}
-	// x, y := m.style.GetFrameSize()
+	x, y := m.style.GetFrameSize()
 	return m.style.
-		// Width(m.width - x).Height(m.height - y).
-		// MaxWidth(m.width - x).MaxHeight(m.height - y).
+		Width(m.width - x).Height(m.height - y).
+		MaxWidth(m.width).MaxHeight(m.height).
 		Render(out)
 }
 func max(a, b int) int {
