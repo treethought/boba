@@ -108,10 +108,7 @@ func (m Box) getNodeSize(n *BoxNode) (w int, y int) {
 
 }
 
-func (m *Box) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var (
-		cmds []tea.Cmd
-	)
+func (m *Box) updateNodes(msg tea.Msg) (mod *Box, cmds []tea.Cmd) {
 	nodes := []*BoxNode{}
 	for _, n := range m.nodes {
 		nmod, cmd := n.Update(msg)
@@ -126,10 +123,17 @@ func (m *Box) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		nodes = append(nodes, nNode)
 	}
 	m.nodes = nodes
+	return m, cmds
+}
+
+func (m *Box) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var (
+		cmds []tea.Cmd
+	)
 
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		return m, nil
+	// case tea.KeyMsg:
+	// 	return m, nil
 
 	case tea.WindowSizeMsg:
 		x, y := m.style.GetFrameSize()
@@ -142,6 +146,8 @@ func (m *Box) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if !m.ready {
 			m.ready = true
 		}
+	default:
+		m, cmds = m.updateNodes(msg)
 	}
 
 	return m, tea.Batch(cmds...)
@@ -194,9 +200,9 @@ func (m *Box) View() string {
 			out = lipgloss.JoinVertical(lipgloss.Center, out, s)
 		}
 	}
-	x, y := m.style.GetFrameSize()
+	// x, y := m.style.GetFrameSize()
 	return m.style.
-		Width(m.width - x).Height(m.height - y).
+		// Width(m.width - x).Height(m.height - y).
 		// MaxWidth(m.width - x).MaxHeight(m.height - y).
 		Render(out)
 }
