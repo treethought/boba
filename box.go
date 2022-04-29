@@ -100,8 +100,6 @@ func (m *Box) Init() tea.Cmd {
 
 func (m Box) getNodeSize(n *BoxNode) (w int, y int) {
 
-	// x, y := n.style.GetFrameSize()
-
 	targetWidth := int(float64(m.width) * (n.SizeX))
 	targetLines := int(float64(m.height) * (n.SizeY))
 	return targetWidth, targetLines
@@ -109,20 +107,12 @@ func (m Box) getNodeSize(n *BoxNode) (w int, y int) {
 }
 
 func (m *Box) updateNodes(msg tea.Msg) (mod *Box, cmds []tea.Cmd) {
-	nodes := []*BoxNode{}
 	for _, n := range m.nodes {
-		nmod, cmd := n.Update(msg)
+		_, cmd := n.Update(msg)
 		if cmd != nil {
 			cmds = append(cmds, cmd)
 		}
-
-		nNode, ok := nmod.(*BoxNode)
-		if !ok {
-			continue
-		}
-		nodes = append(nodes, nNode)
 	}
-	m.nodes = nodes
 	return m, cmds
 }
 
@@ -136,10 +126,6 @@ func (m *Box) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// 	return m, nil
 
 	case tea.WindowSizeMsg:
-		// x, y := m.style.GetFrameSize()
-
-		m.width = int(float64(msg.Width)*(float64(m.SizeX/100))) - x
-		m.height = int(float64(msg.Height)*(float64(m.SizeY/100))) - y
 		m.width = int(float64(msg.Width) * m.SizeX)
 		m.height = int(float64(msg.Height) * m.SizeY)
 
@@ -149,7 +135,7 @@ func (m *Box) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.ready = true
 		}
 	default:
-		m, cmds = m.updateNodes(msg)
+		_, cmds = m.updateNodes(msg)
 	}
 
 	return m, tea.Batch(cmds...)
@@ -163,6 +149,7 @@ func (m *Box) resizeNodes() (cmds []tea.Cmd) {
 			Width:  x,
 			Height: y,
 		}
+		_, cmd := n.Update(msg)
 		cmds = append(cmds, cmd)
 	}
 	return cmds
@@ -183,9 +170,10 @@ func (m *Box) View() string {
 
 		s := strings.ReplaceAll(nodeContent, "\r\n", "\n") // normalize line endings
 
+		fx, fy := n.style.GetFrameSize()
 		s = n.style.
-			// Width(x - fx).
-			// Height(y - fy).
+			Width(x - fx).
+			Height(y - fy).
 			MaxWidth(x).
 			MaxHeight(y).
 			Render(s)

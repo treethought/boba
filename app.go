@@ -134,12 +134,10 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 	}
 
-	m, cmd := a.delegateFunc(msg)
+	_, cmd = a.delegateFunc(msg)
 	if cmd != nil {
 		return a, cmd
 	}
-
-	// current := a.getFocused()
 
 	cmds := []tea.Cmd{}
 	// var mod tea.Model
@@ -152,6 +150,10 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// mod = m
 		}
 		cmds = append(cmds, cmd)
+	}
+
+	// m, cmd = current.Update(msg)
+	// a.setModel(a.currentName, m)
 	return a, tea.Batch(cmds...)
 }
 
