@@ -10,10 +10,15 @@ type MessageStateChange struct {
 	name string
 }
 
+type bobaModel struct {
+	tea.Model
+	control bool
+}
+
 type App struct {
 	current      tea.Model
 	currentName  string
-	views        map[string]tea.Model
+	views        map[string]bobaModel
 	initFunc     func() tea.Cmd
 	delegateFunc UpdateFunc
 }
@@ -21,7 +26,7 @@ type App struct {
 func NewApp() *App {
 	return &App{
 		initFunc:     func() tea.Cmd { return nil },
-		views:        make(map[string]tea.Model),
+		views:        make(map[string]bobaModel),
 		delegateFunc: func(tea.Msg) (tea.Model, tea.Cmd) { return nil, nil },
 	}
 }
@@ -37,10 +42,22 @@ func (a *App) Get(name string) tea.Model {
 }
 
 func (a *App) Add(name string, m tea.Model) {
-	a.setModel(name, m)
+	mod := bobaModel{
+		Model:   m,
+		control: true,
+	}
+	a.setModel(name, mod)
 }
 
-func (a *App) setModel(name string, m tea.Model) {
+func (a *App) Register(name string, m tea.Model) {
+	mod := bobaModel{
+		Model:   m,
+		control: false,
+	}
+	a.setModel(name, mod)
+}
+
+func (a *App) setModel(name string, m bobaModel) {
 	a.views[name] = m
 }
 
@@ -69,20 +86,23 @@ func (a *App) SetInit(f func() tea.Cmd) {
 	a.initFunc = f
 }
 
-// SetDelegate sets the message handler to be run before messages are passed to the focuses model.
+// SetDelegate sets the message handler to be run before messages are passed to the focused model.
 // This function can be used for managing your own key bindings and state handling.
 //
-// If the function returns a nil tea.Cmd, then the application's will continue and pass the message
+// If the function returns a nil tea.Cmd, then will continue and pass the message
 // through to the currently focused model.
 func (a *App) SetDelegate(f UpdateFunc) {
 	a.delegateFunc = f
 }
 
 func (a *App) Init() tea.Cmd {
-	if a.current == nil {
-		return a.initFunc()
+	cmds := []tea.Cmd{}
+	for _, m := range a.views {
+		cmd := m.Init()
+		cmds = append(cmds, cmd)
 	}
-	return a.current.Init()
+
+	return tea.Batch(cmds...)
 }
 
 // Update handles tea.Msgs to perform updates to application model.
@@ -114,16 +134,27 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 	}
 
-	m, cmd := a.delegateFunc(msg)
+	_, cmd = a.delegateFunc(msg)
 	if cmd != nil {
 		return a, cmd
 	}
 
-	current := a.getFocused()
+	cmds := []tea.Cmd{}
+	// var mod tea.Model
+	for n, m := range a.views {
+		if !m.control {
+			continue
+		}
+		_, cmd := m.Update(msg)
+		if n == a.currentName {
+			// mod = m
+		}
+		cmds = append(cmds, cmd)
+	}
 
-	m, cmd = current.Update(msg)
-	a.setModel(a.currentName, m)
-	return a, cmd
+	// m, cmd = current.Update(msg)
+	// a.setModel(a.currentName, m)
+	return a, tea.Batch(cmds...)
 }
 
 // View returns the view to be rendered by calling the currently focused model's View() function.
